@@ -2,7 +2,7 @@
 
 A proof of concept library to enable data validations for python dataframes.
 
-The initial problem is the validation of pension scheme member data but this iibrary is intened to be a generic dataframe validation solution which could be imported into any notebook, script or pipeline regardless of the data domain.
+The initial problem is the validation of pension scheme member data but this library is intended to be a generic dataframe validation solution which could be imported into any notebook, script or pipeline regardless of the data domain.
 
 Focusing on polars DataFrames initially it could be extended to pandas as well.
 
@@ -59,7 +59,8 @@ See ```validate\main.py``` for an example with test data.
 ## Possible Enhancements
 - Redirect failing rows to quarantine for inspection
 - Prettify the report output, add a UI
-- 
+- Persist validation results so that changes in quality over time can be observed
+- Autofix validation fails where possible and appropriate?
 
 ## Observations
 - 
