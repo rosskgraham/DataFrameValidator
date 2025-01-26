@@ -8,23 +8,8 @@ Focusing on polars DataFrames initially it could be extended to pandas as well.
 
 ## Getting Started
 
-This project uses [uv](https://docs.astral.sh/uv/) to manage dependencies. If not already installed, follow the guide here, [Installing uv](https://docs.astral.sh/uv/getting-started/installation/#installing-uv).
-
-Open a terminal at the path containing the ```pyproject.toml``` file and run ```uv sync```.
-
 ```powershell
-PS ...\dataframe-validator> uv sync
-
-```
-
-## Run Tests
-```powershell
-PS ...\dataframe-validator> uv run pytest
-```
-
-## Build
-```powershell
-PS ...\dataframe-validator> uv build
+PS > py -m pip install dataframe-validator
 ```
 
 ## Run
@@ -55,11 +40,3 @@ See ```validate\main.py``` for an example with test data.
 │ Subscription Date ┆ expect_column_value_greater_than       ┆ 2021-01-01, allow_nulls=True  ┆ false  ┆ 427       │
 └───────────────────┴────────────────────────────────────────┴───────────────────────────────┴────────┴───────────┘
 ```
-
-## Possible Enhancements
-- Redirect failing rows to quarantine for inspection
-- Prettify the report output, add a UI
-- 
-
-## Observations
-- 

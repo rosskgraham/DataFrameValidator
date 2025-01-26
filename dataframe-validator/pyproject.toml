@@ -1,0 +1,21 @@
+[project]
+name = "dataframe-validator"
+version = "0.1.0"
+description = "A library for validating dataframes"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "great-tables>=0.16.1",
+    "polars>=1.21.0",
+    "pydantic>=2.10.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "ruff>=0.9.3",
+]
