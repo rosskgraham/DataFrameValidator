@@ -41,11 +41,10 @@ class PolarsDataFrameValidator:
     def __init__(
         self,
         df: pl.DataFrame,
-        quarantine: bool = False, # Not implemented
     ):
         self.df = df
         self.validation_results: list[ValidationResult] = []
-        self.quarantine = quarantine
+        self.validation_fails = pl.DataFrame()
 
     def expect_column_to_exist(
         self,
@@ -69,6 +68,13 @@ class PolarsDataFrameValidator:
         validation_result = self.df.select(column_name).n_unique() == len(self.df)
         non_unique_rows = self.df.filter(self.df.select(column_name).is_unique().not_())
 
+        validation_fails = self.__add_validation_fail_columns(
+            non_unique_rows,
+            "expect_column_to_contain_unique_values",
+            column_name=column_name,
+        )
+
+        self.validation_fails = pl.concat([self.validation_fails, validation_fails])
         self.validation_results.append(
             ValidationResult(
                 expectation_name="expect_column_to_contain_unique_values",
@@ -88,6 +94,16 @@ class PolarsDataFrameValidator:
         """Expect all values in a column to be greater than a given value"""
         validation_result = self.df[column_name].gt(value).all()
         fail_rows = self.df.filter(pl.col(column_name).le(value))
+        
+        validation_fails = self.__add_validation_fail_columns(
+            fail_rows,
+            "expect_column_value_greater_than",
+            column_name=column_name,
+            value=value,
+            allow_nulls=allow_nulls
+        )
+        
+        self.validation_fails = pl.concat([self.validation_fails, validation_fails])
 
         self.validation_results.append(
             ValidationResult(
@@ -153,5 +169,25 @@ class PolarsDataFrameValidator:
     def expect_column_to_be_of_type(self, column_name: str, column_type: type) -> Self:
         """Not implemented"""
         return self
-    
-    
+
+    def show_failures(self):
+        with pl.Config(
+            tbl_hide_column_data_types=True,
+            tbl_hide_dataframe_shape=True,
+            fmt_str_lengths=1000,
+        ):
+            print(self.validation_fails)
+        return self
+
+    def __add_validation_fail_columns(
+        self, df: pl.DataFrame, expectation_name: str, **expectation_args
+    ) -> pl.DataFrame:
+        """Add expectation context columns to the failing rows."""
+        df = df.insert_column(
+            0,
+            pl.lit(expectation_name).alias("expectation_name"),
+        ).insert_column(
+            1,
+            pl.lit(f"{expectation_args}").alias("expectation_args"),
+        )
+        return df
