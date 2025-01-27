@@ -36,7 +36,7 @@ Chain expectations onto the Validator then finally show results.
 See ```validate\main.py``` for an example with test data.
 
 ```python
-(
+validator = (
     PolarsDataFrameValidator(customers)
     .expect_column_to_exist("Customer Id")
     .expect_column_to_contain_unique_values("Index")
@@ -52,8 +52,24 @@ See ```validate\main.py``` for an example with test data.
 │ Customer Id       ┆ expect_column_to_contain_unique_values ┆                               ┆ false  ┆ 2         │
 │ Index             ┆ expect_column_to_contain_unique_values ┆                               ┆ false  ┆ 2         │
 │ Subscription Date ┆ expect_column_value_greater_than       ┆ 1900-01-01, allow_nulls=False ┆ true   ┆ 0         │
-│ Subscription Date ┆ expect_column_value_greater_than       ┆ 2021-01-01, allow_nulls=True  ┆ false  ┆ 427       │
+│ Subscription Date ┆ expect_column_value_greater_than       ┆ 2020-01-02, allow_nulls=True  ┆ false  ┆ 4         │
 └───────────────────┴────────────────────────────────────────┴───────────────────────────────┴────────┴───────────┘
+
+# Print rows failing validation to the console
+validator.show_failures()
+┌────────────────────────────────────────┬──────────────────────────────┬───────┬─────────────────┬───
+│ expectation_name                       ┆ expectation_args             ┆ Index ┆ Customer Id     ┆ … 
+╞════════════════════════════════════════╪══════════════════════════════╪═══════╪═════════════════╪═══
+│ expect_column_to_contain_unique_values ┆ Index                        ┆ 1000  ┆ 51732B5b2328015 ┆ … 
+│ expect_column_to_contain_unique_values ┆ Index                        ┆ 1000  ┆ 51732B5b2328015 ┆ … 
+│ expect_column_to_contain_unique_values ┆ Customer Id                  ┆ 1000  ┆ 51732B5b2328015 ┆ … 
+│ expect_column_to_contain_unique_values ┆ Customer Id                  ┆ 1000  ┆ 51732B5b2328015 ┆ … 
+│ expect_column_value_greater_than       ┆ 2020-01-02, allow_nulls=True ┆ 40    ┆ BEBA4fDAA6C4adC ┆ … 
+│ expect_column_value_greater_than       ┆ 2020-01-02, allow_nulls=True ┆ 148   ┆ EF5858dEe5f7649 ┆ … 
+
+# Write failed rows to csv file for inspection
+validator.validation_fails.write_csv(test_data_path / "fails-customers-1000.csv")
+
 ```
 
 ## Possible Enhancements
