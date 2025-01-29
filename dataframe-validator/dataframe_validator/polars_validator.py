@@ -45,6 +45,7 @@ class PolarsDataFrameValidator:
         self.df = df
         self.validation_results: list[ValidationResult] = []
         self.validation_fails = pl.DataFrame()
+        self._is_valid = True
 
     def expect_column_to_exist(
         self,
@@ -74,6 +75,7 @@ class PolarsDataFrameValidator:
             column_name=column_name,
         )
 
+        self._is_valid = False if not validation_result else self._is_valid
         self.validation_fails = pl.concat([self.validation_fails, validation_fails])
         self.validation_results.append(
             ValidationResult(
@@ -95,6 +97,7 @@ class PolarsDataFrameValidator:
         validation_result = self.df[column_name].gt(value).all()
         fail_rows = self.df.filter(pl.col(column_name).le(value))
         
+        self._is_valid = False if not validation_result else self._is_valid
         validation_fails = self.__add_validation_fail_columns(
             fail_rows,
             "expect_column_value_greater_than",
@@ -191,3 +194,8 @@ class PolarsDataFrameValidator:
             pl.lit(f"{expectation_args}").alias("expectation_args"),
         )
         return df
+
+    @property
+    def is_valid(self):
+        """Return True if all validation expectations are met"""
+        return self._is_valid
