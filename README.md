@@ -45,15 +45,17 @@ validator = (
     .expect_column_value_greater_than("Subscription Date", "2021-01-01", allow_nulls=True)
     .show_results()
 )
-┌───────────────────┬────────────────────────────────────────┬───────────────────────────────┬────────┬───────────┐
-│ column_name       ┆ expectation_name                       ┆ expectation_args              ┆ result ┆ fail_rows │
-╞═══════════════════╪════════════════════════════════════════╪═══════════════════════════════╪════════╪═══════════╡
-│ Customer Id       ┆ expect_column_to_exist                 ┆                               ┆ true   ┆           │
-│ Customer Id       ┆ expect_column_to_contain_unique_values ┆                               ┆ false  ┆ 2         │
-│ Index             ┆ expect_column_to_contain_unique_values ┆                               ┆ false  ┆ 2         │
-│ Subscription Date ┆ expect_column_value_greater_than       ┆ 1900-01-01, allow_nulls=False ┆ true   ┆ 0         │
-│ Subscription Date ┆ expect_column_value_greater_than       ┆ 2020-01-02, allow_nulls=True  ┆ false  ┆ 4         │
-└───────────────────┴────────────────────────────────────────┴───────────────────────────────┴────────┴───────────┘
+┌───────────────────┬────────────────────────────────────────┬───────────────────────────────────────┬────────┬───────────┐
+│ column_name       ┆ expectation_name                       ┆ expectation_args                      ┆ result ┆ fail_rows │
+╞═══════════════════╪════════════════════════════════════════╪═══════════════════════════════════════╪════════╪═══════════╡
+│ Country           ┆ expect_column_value_to_be_in_set       ┆ values=['United States of America']   ┆ ❌     ┆ 996       │
+│ Customer Id       ┆ expect_column_to_exist                 ┆                                       ┆ ✅     ┆           │
+│ Customer Id       ┆ expect_column_to_contain_unique_values ┆                                       ┆ ❌     ┆ 2         │
+│ Index             ┆ expect_column_to_contain_unique_values ┆                                       ┆ ❌     ┆ 2         │
+│ Subscription Date ┆ expect_column_value_greater_than       ┆ value='1900-01-01', allow_nulls=False ┆ ✅     ┆ 0         │
+│ Subscription Date ┆ expect_column_value_greater_than       ┆ value='2020-01-02', allow_nulls=True  ┆ ❌     ┆ 4         │
+└───────────────────┴────────────────────────────────────────┴───────────────────────────────────────┴────────┴───────────┘
+
 
 # Print rows failing validation to the console
 validator.show_failures()
@@ -73,7 +75,6 @@ validator.validation_fails.write_csv(test_data_path / "fails-customers-1000.csv"
 ```
 
 ## Possible Enhancements
-- Redirect failing rows to quarantine for inspection
 - Prettify the report output, add a UI
 - Persist validation results so that changes in quality over time can be observed
 - Autofix validation fails where possible and appropriate?
