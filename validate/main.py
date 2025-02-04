@@ -26,6 +26,7 @@ def validate_customer(
         .expect_column_value_greater_than(
             "Subscription Date", "2020-01-02", allow_nulls=True
         )
+        .expect_column_value_to_be_in_set("Country",["United States of America"])
     )
     if show_results:
         validator.show_results()
@@ -41,7 +42,7 @@ def validate_customer(
 
 
 # Run the validator and see results
-is_valid = validate_customer(customers)
+is_valid = validate_customer(customers, show_results=False)
 print(f"Customers dataframe is{' ' if is_valid else ' not '}valid")
 
 # Run the validator, see results and quarantine the failed rows

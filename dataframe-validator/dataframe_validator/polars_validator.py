@@ -96,22 +96,22 @@ class PolarsDataFrameValidator:
         """Expect all values in a column to be greater than a given value"""
         validation_result = self.df[column_name].gt(value).all()
         fail_rows = self.df.filter(pl.col(column_name).le(value))
-        
+
         self._is_valid = False if not validation_result else self._is_valid
         validation_fails = self.__add_validation_fail_columns(
             fail_rows,
             "expect_column_value_greater_than",
             column_name=column_name,
             value=value,
-            allow_nulls=allow_nulls
+            allow_nulls=allow_nulls,
         )
-        
+
         self.validation_fails = pl.concat([self.validation_fails, validation_fails])
 
         self.validation_results.append(
             ValidationResult(
                 expectation_name="expect_column_value_greater_than",
-                expectation_args=f"{str(value)}, {allow_nulls=}",
+                expectation_args=f"{value=}, {allow_nulls=}",
                 column_name=column_name,
                 fail_rows=len(fail_rows),
                 result=validation_result,
@@ -132,7 +132,12 @@ class PolarsDataFrameValidator:
                         self.validation_results, key=lambda x: x.column_name
                     )
                 ]
-            ).with_columns(pl.col("fail_rows").fill_null(""))
+            ).with_columns(
+                pl.col("fail_rows").fill_null(""),
+                pl.col("result").map_elements(
+                    function=lambda x: "✅" if x else "❌", return_dtype=pl.Utf8
+                ),
+            )
             print(results)
         return self
 
@@ -166,7 +171,29 @@ class PolarsDataFrameValidator:
     def expect_column_value_to_be_in_set(
         self, column_name: str, values: list[str]
     ) -> Self:
-        """Not implemented"""
+        """Return True if all values in a column are in a given set"""
+        validation_result = self.df[column_name].is_in(values).all()
+        fail_rows = self.df.filter(pl.col(column_name).is_in(values).not_())
+
+        self._is_valid = False if not validation_result else self._is_valid
+        validation_fails = self.__add_validation_fail_columns(
+            fail_rows,
+            "expect_column_value_to_be_in_set",
+            column_name=column_name,
+            values=values,
+        )
+
+        self.validation_fails = pl.concat([self.validation_fails, validation_fails])
+
+        self.validation_results.append(
+            ValidationResult(
+                expectation_name="expect_column_value_to_be_in_set",
+                expectation_args=f"{values=}",
+                column_name=column_name,
+                fail_rows=len(fail_rows),
+                result=validation_result,
+            )
+        )
         return self
 
     def expect_column_to_be_of_type(self, column_name: str, column_type: type) -> Self:
