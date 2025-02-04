@@ -226,3 +226,36 @@ class PolarsDataFrameValidator:
     def is_valid(self):
         """Return True if all validation expectations are met"""
         return self._is_valid
+
+    def expect_column_value_length_greater_than(
+        self,
+        column_name: str,
+        length: int | float | date | datetime,
+    ) -> Self:
+        """Expect column values to be strings of length greater than a given value"""
+        if self.df[column_name].dtype != pl.String:
+            raise DataValidationError(f"Column '{column_name}' is not of string type")
+        
+        validation_result = self.df[column_name].str.len_chars().gt(length).all()
+        fail_rows = self.df.filter(pl.col(column_name).str.len_chars().le(length))
+
+        self._is_valid = False if not validation_result else self._is_valid
+        validation_fails = self.__add_validation_fail_columns(
+            fail_rows,
+            "expect_column_value_greater_than",
+            column_name=column_name,
+            length=length,
+        )
+
+        self.validation_fails = pl.concat([self.validation_fails, validation_fails])
+
+        self.validation_results.append(
+            ValidationResult(
+                expectation_name="expect_column_value_length_greater_than",
+                expectation_args=f"{length=}",
+                column_name=column_name,
+                fail_rows=len(fail_rows),
+                result=validation_result,
+            )
+        )
+        return self
