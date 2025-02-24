@@ -37,40 +37,32 @@ See ```validate\main.py``` for an example with test data.
 
 ```python
 validator = (
-    PolarsDataFrameValidator(customers)
-    .expect_column_to_exist("Customer Id")
-    .expect_column_to_contain_unique_values("Index")
-    .expect_column_to_contain_unique_values("Customer Id")
-    .expect_column_value_greater_than("Subscription Date", "1900-01-01")
-    .expect_column_value_greater_than("Subscription Date", "2021-01-01", allow_nulls=True)
+    PolarsDataFrameValidator(members)
+    .expect_column_to_exist("Member ID")
+    .expect_column_to_contain_unique_values("Member ID")
+    .expect_column_value_to_be_in_set("Status", ["Active", "Retired", "Deferred"])
     .show_results()
 )
-┌───────────────────┬────────────────────────────────────────┬───────────────────────────────────────┬────────┬───────────┐
-│ column_name       ┆ expectation_name                       ┆ expectation_args                      ┆ result ┆ fail_rows │
-╞═══════════════════╪════════════════════════════════════════╪═══════════════════════════════════════╪════════╪═══════════╡
-│ Country           ┆ expect_column_value_to_be_in_set       ┆ values=['United States of America']   ┆ ❌     ┆ 996       │
-│ Customer Id       ┆ expect_column_to_exist                 ┆                                       ┆ ✅     ┆           │
-│ Customer Id       ┆ expect_column_to_contain_unique_values ┆                                       ┆ ❌     ┆ 2         │
-│ Index             ┆ expect_column_to_contain_unique_values ┆                                       ┆ ❌     ┆ 2         │
-│ Subscription Date ┆ expect_column_value_greater_than       ┆ value='1900-01-01', allow_nulls=False ┆ ✅     ┆ 0         │
-│ Subscription Date ┆ expect_column_value_greater_than       ┆ value='2020-01-02', allow_nulls=True  ┆ ❌     ┆ 4         │
-└───────────────────┴────────────────────────────────────────┴───────────────────────────────────────┴────────┴───────────┘
-
+┌─────────────┬────────────────────────────────────────┬──────────────────────────────────────────┬────────┬───────────┐
+│ column_name ┆ expectation_name                       ┆ expectation_args                         ┆ result ┆ fail_rows │
+╞═════════════╪════════════════════════════════════════╪══════════════════════════════════════════╪════════╪═══════════╡
+│ Member ID   ┆ expect_column_to_exist                 ┆                                          ┆ ✅     ┆           │
+│ Member ID   ┆ expect_column_to_contain_unique_values ┆                                          ┆ ❌     ┆ 2         │
+│ Status      ┆ expect_column_value_to_be_in_set       ┆ values=['Active', 'Retired', 'Deferred'] ┆ ❌     ┆ 1         │
+└─────────────┴────────────────────────────────────────┴──────────────────────────────────────────┴────────┴───────────┘
 
 # Print rows failing validation to the console
 validator.show_failures()
-┌────────────────────────────────────────┬──────────────────────────────┬───────┬─────────────────┬───
-│ expectation_name                       ┆ expectation_args             ┆ Index ┆ Customer Id     ┆ … 
-╞════════════════════════════════════════╪══════════════════════════════╪═══════╪═════════════════╪═══
-│ expect_column_to_contain_unique_values ┆ Index                        ┆ 1000  ┆ 51732B5b2328015 ┆ … 
-│ expect_column_to_contain_unique_values ┆ Index                        ┆ 1000  ┆ 51732B5b2328015 ┆ … 
-│ expect_column_to_contain_unique_values ┆ Customer Id                  ┆ 1000  ┆ 51732B5b2328015 ┆ … 
-│ expect_column_to_contain_unique_values ┆ Customer Id                  ┆ 1000  ┆ 51732B5b2328015 ┆ … 
-│ expect_column_value_greater_than       ┆ 2020-01-02, allow_nulls=True ┆ 40    ┆ BEBA4fDAA6C4adC ┆ … 
-│ expect_column_value_greater_than       ┆ 2020-01-02, allow_nulls=True ┆ 148   ┆ EF5858dEe5f7649 ┆ … 
+┌────────────────────────────────────────┬────────────────────────────────────────────────────────────────────────┬───────────┬────────┬─────┬──────────┐
+│ expectation_name                       ┆ expectation_args                                                       ┆ Member ID ┆ Gender ┆ ... ┆ Status   │
+╞════════════════════════════════════════╪════════════════════════════════════════════════════════════════════════╪═══════════╪════════╪═════╪══════════╡
+│ expect_column_to_contain_unique_values ┆ {'column_name': 'Member ID'}                                           ┆ 123       ┆ Female ┆ ... ┆ Deferred │
+│ expect_column_to_contain_unique_values ┆ {'column_name': 'Member ID'}                                           ┆ 123       ┆ Male   ┆ ... ┆ Deferred │
+│ expect_column_value_to_be_in_set       ┆ {'column_name': 'Status', 'values': ['Active', 'Retired', 'Deferred']} ┆ 965       ┆ Male   ┆ ... ┆ Inactive │
+└────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────┴───────────┴────────┴─────┴──────────┘
 
 # Write failed rows to csv file for inspection
-validator.validation_fails.write_csv(test_data_path / "fails-customers-1000.csv")
+validator.validation_fails.write_csv(test_data_path / "fails-members.csv")
 
 ```
 

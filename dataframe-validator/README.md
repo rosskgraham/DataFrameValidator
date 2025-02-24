@@ -18,7 +18,7 @@ Create an instance of a DataFrameValidator, passing a dataframe into the constru
 
 Chain expectations onto the Validator then finally show results.
 
-See ```validate\main.py``` for an example with test data.
+See ```validate\validator.py``` for an example with test data.
 
 ```python
 (

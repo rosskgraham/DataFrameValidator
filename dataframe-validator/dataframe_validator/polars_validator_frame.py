@@ -2,6 +2,8 @@ import polars as pl
 from typing import Self
 from pydantic import BaseModel
 from datetime import date, datetime
+from polars._typing import FrameInitTypes, SchemaDefinition, SchemaDict, Orientation
+from polars.datatypes.constants import N_INFER_DEFAULT
 from .exceptions import DataValidationError
 
 class ValidationResult(BaseModel):
@@ -14,31 +16,38 @@ class ValidationResult(BaseModel):
     fail_rows: int | None = None
 
 
-class PolarsDataFrameValidator:
-    """Validator for Polars DataFrames
-    
+class ValidatorDataFrame(pl.DataFrame):
+    """
+    An extended Polars DataFrame with data validation expectation methods.
+
     Example usage:
     --------------
-    >>> PolarsDataFrameValidator(customers) \\
+    >>> ValidatorDataFrame(customers) \\
         .expect_column_to_exist("Customer Id") \\
         .expect_column_to_contain_unique_values("Index") \\
         .show_results()
-    ...┌───────────────────┬────────────────────────────────────────┬───────────────────────────────┬────────┬───────────┐
-       │ column_name       ┆ expectation_name                       ┆ expectation_args              ┆ result ┆ fail_rows │
-       ╞═══════════════════╪════════════════════════════════════════╪═══════════════════════════════╪════════╪═══════════╡
-       │ Customer Id       ┆ expect_column_to_exist                 ┆                               ┆ true   ┆           │
-       │ Customer Id       ┆ expect_column_to_contain_unique_values ┆                               ┆ false  ┆ 2         │
-       │ Index             ┆ expect_column_to_contain_unique_values ┆                               ┆ false  ┆ 2         │
-       │ Subscription Date ┆ expect_column_value_greater_than       ┆ 1900-01-01, allow_nulls=False ┆ true   ┆ 0         │
-       │ Subscription Date ┆ expect_column_value_greater_than       ┆ 2021-01-01, allow_nulls=True  ┆ false  ┆ 427       │
-       └───────────────────┴────────────────────────────────────────┴───────────────────────────────┴────────┴───────────┘
     """
 
     def __init__(
         self,
-        df: pl.DataFrame,
+        data: FrameInitTypes | None = None,
+        schema: SchemaDefinition | None = None,
+        *,
+        schema_overrides: SchemaDict | None = None,
+        strict: bool = True,
+        orient: Orientation | None = None,
+        infer_schema_length: int | None = N_INFER_DEFAULT,
+        nan_to_null: bool = False,
     ):
-        self.df = df
+        super().__init__(
+            data=data,
+            schema=schema,
+            schema_overrides=schema_overrides,
+            strict=strict,
+            orient=orient,
+            infer_schema_length=infer_schema_length,
+            nan_to_null=nan_to_null,
+        )
         self.validation_results: list[ValidationResult] = []
         self.validation_fails = pl.DataFrame()
         self._is_valid = True
@@ -48,13 +57,11 @@ class PolarsDataFrameValidator:
         column_name: str,
     ) -> Self:
         """Expect a column to exist in the DataFrame"""
-        validation_result = column_name in self.df.columns
-        self._is_valid = False if not validation_result else self._is_valid
         self.validation_results.append(
             ValidationResult(
                 expectation_name="expect_column_to_exist",
                 column_name=column_name,
-                result=validation_result,
+                result=column_name in self.columns,
             )
         )
         return self
@@ -64,8 +71,8 @@ class PolarsDataFrameValidator:
         column_name: str,
     ) -> Self:
         """Expect all values in a column to be unique"""
-        validation_result = self.df.select(column_name).n_unique() == len(self.df)
-        non_unique_rows = self.df.filter(self.df.select(column_name).is_unique().not_())
+        validation_result = self.select(column_name).n_unique() == len(self)
+        non_unique_rows = self.filter(self.select(column_name).is_unique().not_())
 
         validation_fails = self.__add_validation_fail_columns(
             non_unique_rows,
@@ -92,8 +99,8 @@ class PolarsDataFrameValidator:
         allow_nulls: bool = False,  # Not implemented
     ) -> Self:
         """Expect all values in a column to be greater than a given value"""
-        validation_result = self.df[column_name].gt(value).all()
-        fail_rows = self.df.filter(pl.col(column_name).le(value))
+        validation_result = self[column_name].gt(value).all()
+        fail_rows = self.filter(pl.col(column_name).le(value))
 
         self._is_valid = False if not validation_result else self._is_valid
         validation_fails = self.__add_validation_fail_columns(
@@ -122,6 +129,7 @@ class PolarsDataFrameValidator:
             tbl_hide_column_data_types=True,
             tbl_hide_dataframe_shape=True,
             fmt_str_lengths=1000,
+            tbl_rows=len(self.validation_results)
         ):
             results = pl.DataFrame(
                 [
@@ -158,6 +166,28 @@ class PolarsDataFrameValidator:
         self, column_a: str, column_b: str
     ) -> Self:
         """Not implemented"""
+        validation_result = len(self.filter(pl.col(column_a) <= pl.col(column_b))) == 0
+        fail_rows = self.filter(pl.col(column_a) <= pl.col(column_b))
+
+        self._is_valid = False if not validation_result else self._is_valid
+        validation_fails = self.__add_validation_fail_columns(
+            fail_rows,
+            "expect_column_a_greater_than_column_b",
+            column_a=column_a,
+            column_b=column_b,
+        )
+
+        self.validation_fails = pl.concat([self.validation_fails, validation_fails])
+
+        self.validation_results.append(
+            ValidationResult(
+                expectation_name="expect_column_value_greater_than",
+                expectation_args=f"{column_a=}, {column_b=}",
+                fail_rows=len(fail_rows),
+                result=validation_result,
+                column_name=column_a
+            )
+        )
         return self
 
     def expect_column_value_to_match_regex(
@@ -170,8 +200,8 @@ class PolarsDataFrameValidator:
         self, column_name: str, values: list[str]
     ) -> Self:
         """Return True if all values in a column are in a given set"""
-        validation_result = self.df[column_name].is_in(values).all()
-        fail_rows = self.df.filter(pl.col(column_name).is_in(values).not_())
+        validation_result = self[column_name].is_in(values).all()
+        fail_rows = self.filter(pl.col(column_name).is_in(values).not_())
 
         self._is_valid = False if not validation_result else self._is_valid
         validation_fails = self.__add_validation_fail_columns(
@@ -232,11 +262,11 @@ class PolarsDataFrameValidator:
         length: int | float | date | datetime,
     ) -> Self:
         """Expect column values to be strings of length greater than a given value"""
-        if self.df[column_name].dtype != pl.String:
+        if self[column_name].dtype != pl.String:
             raise DataValidationError(f"Column '{column_name}' is not of string type")
 
-        validation_result = self.df[column_name].str.len_chars().gt(length).all()
-        fail_rows = self.df.filter(pl.col(column_name).str.len_chars().le(length))
+        validation_result = self[column_name].str.len_chars().gt(length).all()
+        fail_rows = self.filter(pl.col(column_name).str.len_chars().le(length))
 
         self._is_valid = False if not validation_result else self._is_valid
         validation_fails = self.__add_validation_fail_columns(

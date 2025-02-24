@@ -1,0 +1,4 @@
+expectation_name,expectation_args,Member ID,Gender,Title,Forename,Surname,Nino,Date Of Birth,Joining Date,Date Of Death,Status
+expect_column_to_contain_unique_values,{'column_name': 'Nino'},892,Female,Dr.,Laura,Cook,WX572792D,1981-09-11,2021-04-29,,Deferred
+expect_column_to_contain_unique_values,{'column_name': 'Nino'},953,Male,Mr.,Michael,May,WX572792D,1925-05-12,1978-04-29,,Deferred
+expect_column_value_to_be_in_set,"{'column_name': 'Status', 'values': ['Active', 'Retired', 'Deferred']}",965,Male,Mr.,Calvin,Harris,NP632600C,1918-02-01,1950-01-23,,Inactive
